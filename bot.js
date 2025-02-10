@@ -53,21 +53,18 @@ client.on(Events.MessageCreate, (message) => {
   }
 });
 
-const userConversations = new Map();
+const conversation =  { messages: [] };
 client.on(Events.MessageCreate, async (message) => {
   console.log(`Message received: ${message.content}`);
 
   if (message.author.bot) return;
   if (message.channelId !== p_channel.botChannelID && message.channelId !== p_channel.setupChannelID) return;
 
-  let conversation = userConversations.get(message.author.id);
-  if (!conversation) {
-    conversation = { messages: [] };  // Create an empty history for the user
-    userConversations.set(message.author.id, conversation);
-  }
+  const member = await message.guild.members.fetch(message.author.id);
+  const displayName = member.nickname || member.user.globalName;
 
   // Add the new user message to the history
-  conversation.messages.push({ role: 'user', content: message.content });
+  conversation.messages.push({ role: 'user', content: displayName + ": " + message.content });
 
   // Call the aiPrompt with the full conversation history
   const response = await aiPrompt(conversation.messages);
@@ -76,7 +73,12 @@ client.on(Events.MessageCreate, async (message) => {
   conversation.messages.push({ role: 'assistant', content: response.choices[0].message.content });
 
   message.reply(response.choices[0].message.content);
-  console.dir(userConversations, { depth: null });
+  // console.dir(conversation, { depth: null });
+
+  console.log(conversation.messages.length);
+  if (conversation.messages.length === 30) {
+    conversation.messages = conversation.messages.slice(2);
+  }
 });
 
 client.on(Events.MessageCreate, (message) => {
